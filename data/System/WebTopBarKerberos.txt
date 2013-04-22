@@ -1,0 +1,1 @@
+<div id="modacTopBarPersonal"><div id="krb-wrapper">%KRBLOGINBAR%</div></div>

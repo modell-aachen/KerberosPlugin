@@ -1,0 +1,205 @@
+%META:TOPICINFO{author="BaseUserMapping_333" comment="reprev" date="1365010454" format="1.1" reprev="5" version="6"}%
+---+!! !KerberosPlugin
+
+Provides a =KerberosLogin= module which extends Foswiki&apos;s =TemplateLogin= by [[http://en.wikipedia.org/wiki/Kerberos_(protocol)][Kerberos]] authentication.
+
+%TOC%
+
+---++ Usage
+
+This plugin adds a Kerberos capable Login-Manager. Together with its companion, a patched _mod_auth_kerb_ Apache module (and some Javascript), a login mechanism is provided by which every user presenting a valid TGT is logged in automatically. In case of an invalid or even missing TGT the user won&apos;t be declined by the web server but authenticated as WikiGuest. Any guest may still provide his username and password to authenticate against a local KDC.
+
+---++ Installation Instructions
+
+---+++ Installing mod_auth_kerb
+
+Get the sources for _mod_auth_kerb_ version 5.4 from [[http://sourceforge.net/projects/modauthkerb/?source=navbar][Sourceforge]]. Apply the patch below, build and install the module. A more detailed description of the build process and according apache configuration is available [[http://modauthkerb.sourceforge.net/install.html][here]].
+
+However, it is important that you apply the patch before you start *make*.
+
+*Please note that this patch was written for _mod_auth_kerb_ version 5.4 targeting _Apache_ 2.2.x and will definetely fail on Apache 2.4. due to minor API changes. Building against Apache &gt; 2.2 requires further patching.*
+
+<pre>
+--- a/src/mod_auth_kerb.c   2008-12-04 11:14:03.000000000 +0100
++++ b/src/mod_auth_kerb.c   2013-04-03 11:11:16.319646483 +0200
+@@ -147,7 +147,7 @@
+ #define PROXYREQ_PROXY STD_PROXY
+ #endif
+ 
+-/*************************************************************************** 
++/***************************************************************************
+  Auth Configuration Structure
+  ***************************************************************************/
+ typedef struct {
+@@ -157,6 +157,8 @@
+    const char *krb_service_name;
+    int krb_authoritative;
+    int krb_delegate_basic;
++   int krb_anonymous_login;
++   const char *krb_anonymous_user;
+ #if 0
+    int krb_ssl_preauthentication;
+ #endif
+@@ -220,6 +222,12 @@
+    command("KrbDelegateBasic", ap_set_flag_slot, krb_delegate_basic,
+      FLAG, "Always offer Basic authentication regardless of KrbMethodK5Pass and pass on authentication to lower modules if Basic headers arrive."),
+ 
++   command("KrbAnonymousLogin", ap_set_flag_slot, krb_anonymous_login,
++     FLAG, "Set to &apos;on&apos; to bypass the enforced negotiation mechanism."),
++
++   command("KrbAnonymousUser", ap_set_string_slot, krb_anonymous_user,
++     TAKE1, "Sets the remote user in case of an anoymous login attempt."),
++
+ #if 0
+    command("KrbEnableSSLPreauthentication", ap_set_flag_slot, krb_ssl_preauthentication,
+      FLAG, "Don&apos;t do Kerberos authentication if the user is already authenticated using SSL and her client certificate."),
+@@ -325,6 +333,8 @@
+    ((kerb_auth_config *)rec)-&gt;krb_service_name = NULL;
+    ((kerb_auth_config *)rec)-&gt;krb_authoritative = 1;
+    ((kerb_auth_config *)rec)-&gt;krb_delegate_basic = 0;
++   ((kerb_auth_config *)rec)-&gt;krb_anonymous_login = 0;
++   ((kerb_auth_config *)rec)-&gt;krb_anonymous_user = NULL;
+ #if 0
+    ((kerb_auth_config *)rec)-&gt;krb_ssl_preauthentication = 0;
+ #endif
+@@ -1622,6 +1632,35 @@
+    char *negotiate_ret_value = NULL;
+    char keyname[1024];
+ 
++   if (conf-&gt;krb_anonymous_login) {
++      const char *text = "&apos;KrbAnonymousLogin&apos; is set. Ignoring flag &apos;%s&apos;.";
++
++#ifdef KRB5
++      if (conf-&gt;krb_method_k5pass) {
++         conf-&gt;krb_method_k5pass = 0;
++         log_rerror(APLOG_MARK, APLOG_NOTICE, 0, r, text, "KrbMethodK5Passwd" );
++      }
++      
++      if (!conf-&gt;krb_method_gssapi) {
++         log_rerror(APLOG_MARK, APLOG_ERR, 0, r, 
++            "Flag &apos;KrbMethodNegotiate&apos; is set to &apos;off&apos; while &apos;KrbAnonymousLogin&apos; is set to &apos;on&apos;. Declining all requests!");
++         return DECLINED;
++      }
++#endif
++
++      if (conf-&gt;krb_delegate_basic) {
++         conf-&gt;krb_delegate_basic = 0;
++         log_rerror(APLOG_MARK, APLOG_NOTICE, 0, r, text, "KrbDelegateBasic" );
++      }
++
++      if (!conf-&gt;krb_authoritative) {
++         conf-&gt;krb_authoritative = 1;
++         log_rerror(APLOG_MARK, APLOG_NOTICE, 0, r, text, "KrbAuthoritative" );
++      }
++
++      conf-&gt;krb_verify_kdc = 1;
++   }
++
+    /* get the type specified in .htaccess */
+    type = ap_auth_type(r);
+ 
+@@ -1638,6 +1677,12 @@
+    else
+       return DECLINED;
+ 
++   if (conf-&gt;krb_anonymous_login && !use_krb5) {
++      log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
++         "KerberosV4 is NOT supported while flag &apos;KrbAnonymousLogin&apos; is set." );
++      return DECLINED;
++   }
++
+ #if 0
+    if (conf-&gt;krb_ssl_preauthentication) {
+       const char *ssl_client_verify = ssl_var_lookup(r-&gt;pool, r-&gt;server,
+@@ -1653,9 +1698,15 @@
+                                        ? "Proxy-Authorization"
+                    : "Authorization");
+    if (!auth_line) {
+-      set_kerb_auth_headers(r, conf, use_krb4, use_krb5, 
+-                       (use_krb5) ? "\0" : NULL);
+-      return HTTP_UNAUTHORIZED;
++      if (conf-&gt;krb_anonymous_login) {
++         MK_USER = conf-&gt;krb_anonymous_user;
++         MK_AUTH_TYPE = NULL;
++         return OK;
++      } else {
++         set_kerb_auth_headers(r, conf, use_krb4, use_krb5,
++                          (use_krb5) ? "\0" : NULL);
++         return HTTP_UNAUTHORIZED;
++      }
+    }
+    auth_type = ap_getword_white(r-&gt;pool, (const char **)&auth_line);
+</pre>
+
+---+++ Configuring Apache
+
+This plugin adds two new configuration flags to =mod_auth_kerb=:
+   1 *KrbAnonymousLogin on|off*
+      * Default: off
+      * Enables anonymous login
+   1 *KrbAnonymousUser username*
+      * Default: NULL
+      * Sets the remote use in case of an anonymous login attempt
+
+Change your Apache Foswiki configuration as shown below:
+
+1. Add a new =Location= directive. It will be used for Kerberos authentication
+<pre>
+# Do NOT change this directive
+<Location "/bin/krblogin">
+    AuthName KrbAuth
+    AuthType Kerberos
+    Krb5Keytab /path/to/keytab
+    KrbAuthRealms YOUR.REALM
+    KrbMethodNegotiate On
+    KrbMethodK5Passwd Off
+    KrbAnonymousLogin Off      # &lt;--- this line is important!
+    require valid-user
+</Location>
+</pre>
+
+2. Change your =Directory= directive of Foswiki&apos;s bin folder to match the new authentication mechanism
+<pre>
+&lt;Directory "/path/to/qwiki"&gt;
+...
+  AuthName KrbAuth
+  AuthType Kerberos
+  Krb5Keytab /path/to/keytab
+  KrbAuthRealms YOUR.REALM
+  KrbMethodNegotiate On
+  KrbMethodK5Passwd Off
+  KrbAnonymousLogin On
+  require valid-user
+...
+</pre>
+
+---+++ Configuring the plugin
+
+You *must* run =configure= and give a value for {Plugins}{KerberosPlugin}{Realm} so the plugin knows the authentication realm.
+
+---+++ Adjust skin settings
+
+This plugin ships with a [[%SYSTEMWEB%.SkinTemplates][skin template]], =templates/viewtopbar.kerberos.tmpl=, that customises the "login area" on top of each page.The template is enabled by adding =kerberos= to the skin path (see [[%MAINWEB%/SitePreferences][%MAINWEB%.SitePreferences]]), for example:
+<verbatim>
+    * Set SKIN = kerberos,modac
+</verbatim>
+
+The template is not guaranteed to work with other skins, but should provide sufficient inspiration for you to be able to customise them if necessary.
+
+---++ License
+
+This software is released under the [[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GNU Public License, version 2]].
+
+---++ Info
+
+|  Author(s): | [[http://www.modell-aachen.de][Sven Meyer]] |
+|  Copyright: | © %GMTIME{"$year"}% [[http://www.modell-aachen.de][Modell Aachen GmbH]] |
+|  License: | [[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]] |
+|  Release: | 1.0 |
+|  Version: | 1001 (2013-04-02) |
+|  Change History: | <!-- versions below in reverse order --> |
+|  1.0 | Initial release |
+|  Dependencies: | <table border="1" class="foswikiTable"> <tbody> <tr> <th> Name</th> <th> Version</th> <th> Description</th> </tr> <tr> <td align="left"> Authen::Krb5::Simple</td> <td align="left"> &gt;=0</td> <td align="left"> Required</td> </tr> <tr> <td align="left"> Foswiki::Plugins::JQueryPlugin</td> <td align="left"> &gt;=0</td> <td align="left"> Required</td> </tr> <tr> <td align="left"> Foswiki::Contrib::ModacSkin</td> <td align="left"> &gt;=0</td> <td align="left"> Optional</td> </tr> </tbody> </table> |
+|  Home page: | http://www.modell-aachen.de |
+|  Support: | mailto:meyer@modell-aachen.de |
+<!-- Do _not_ attempt to edit this topic; it is auto-generated. -->

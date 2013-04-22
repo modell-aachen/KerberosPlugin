@@ -1,0 +1,18 @@
+%TMPL:DEF{"krb::autologin"}%
+<div id="krb-autologin">
+  <img id="krb-placeholder" src="%PUBURL%/System/KerberosPlugin/assets/user-icon.png" />&nbsp;&nbsp;%LOGIN%
+  <script>krbAutoLogin();</script>
+</div>
+%TMPL:END%
+
+%TMPL:DEF{"krb::login"}%
+<div id="krb-login">
+  <img src="%PUBURL%/System/KerberosPlugin/assets/user-icon.png" />&nbsp;<noautolink>%KRBUSER%</noautolink>%IF{"istopic '%WIKIUSERNAME%'" then="&nbsp;&nbsp;[[%WIKIUSERNAME%][%MAKETEXT{"MyPage"}%]]"}%&nbsp;&nbsp;%LOGIN%
+</div>
+%TMPL:END%
+
+%TMPL:DEF{"krb::logout"}%
+<div id="krb-logout">
+  <img src="%PUBURL%/System/KerberosPlugin/assets/user-icon.png" />&nbsp;<noautolink>%KRBUSER%</noautolink>%IF{"istopic '%WIKIUSERNAME%'" then="&nbsp;&nbsp;[[%WIKIUSERNAME%][%MAKETEXT{"MyPage"}%]]"}%&nbsp;&nbsp;%LOGOUT%
+</div>
+%TMPL:END%

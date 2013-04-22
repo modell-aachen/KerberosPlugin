@@ -1,0 +1,5 @@
+ONLYIF ( $Foswiki::Plugins::VERSION < 2.3)
+Foswiki::Contrib::PatchFoswikiContrib, >=1.3, perl, Required if your extension vx.x.x style version (recommended).
+Foswiki::Contrib::ModacSkin, >=0, perl, Q.Wiki Skins
+Foswiki::Plugins::JQueryPlugin, >=0, perl, JQuery Javascript Environment
+Authen::Krb5::Simple, >=0, perl, Kerberos Authentication
