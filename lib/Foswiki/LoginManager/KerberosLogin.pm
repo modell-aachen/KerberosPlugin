@@ -150,17 +150,18 @@ sub loadSession {
     if ( defined $user ) {
       $user =~ s/^\s+//o;
       $user =~ s/\s+$//o;
-      $user = $this->{ldap}->fromUtf8( $user );
+      $user = $self->{ldap}->fromUtf8( $user );
 
-      $user = $this->{ldap}->locale_lc( $user ) if ( $this->{ldap}{caseSensitivity} eq 'off' );
-      $user = $this->{ldap}->normalizeLoginName( $user ) if $this->{ldap}{normalizeLoginName};
+      $user = $self->{ldap}->locale_lc( $user ) if ( $self->{ldap}{caseSensitivity} eq 'off' );
+      $user = $self->{ldap}->normalizeLoginName( $user ) if $self->{ldap}{normalizeLoginName};
 
-      unless ( $this->{ldap}{excludeMap}{$user} ) {
-        $this->{ldap}->checkCacheForLoginName( $user );
+      unless ( $self->{ldap}{excludeMap}{$user} ) {
+        $self->{ldap}->checkCacheForLoginName( $user );
       } else {
         return $origUser;
       }
     }
+  }
 
   return $user;
 }
