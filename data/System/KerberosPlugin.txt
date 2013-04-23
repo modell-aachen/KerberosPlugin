@@ -1,24 +1,42 @@
-%META:TOPICINFO{author="BaseUserMapping_333" comment="reprev" date="1366618151" format="1.1" reprev="7" version="7"}%
+%META:TOPICINFO{author="BaseUserMapping_333" comment="reprev" date="1366722853" format="1.1" reprev="9" version="9"}%
 ---+!! !KerberosPlugin
 
 Erweitert Foswikis TemplateLogin mit der Möglichkeit zur [[http://en.wikipedia.org/wiki/Kerberos_(protocol)][Kerberos]]-Anmeldung.
 
 %TOC%
 
----++ Usage
+---++ Verwendung
 
 Dieses Plugin bietet die Möglichkeit einer Kerberos-Anmeldung innerhalb des Wikis. Erfoderlich ist sowohl Javascript, als auch ein gepatchtes Apache Kerberos-Modul (mod_auth_kerb). Fügt ein Benutzer über ein gültiges TGT, wird dieser über Kerberos angemeldet. Andernfalls erfolgt ein Fallback auf den TemplateLogin.
 
----++ Installation Instructions
+---++ Installationsanleitung
 
 ---+++ Apache Modul: mod_auth_kerb
-   1 Den Quelltext von mod_auth_kerb, Version 5.4 von [[http://sourceforge.net/projects/modauthkerb/?source=navbar][Sourceforge]] herunterladen.
-   1 [[/pup/System/KerberosPlugin/assets/mod_auth_kerb-modac.patch][Diesen]] Patch anwenden:
-      * _patch -p0 &lt; mod_auth_kerb-modac.patch_
+   1 Den Quelltext von mod_auth_kerb, Version 5.4 von [[http://sourceforge.net/projects/modauthkerb/?source=navbar][Sourceforge]] herunterladen und entpacken.
+   1 In das Verzeichnis wechseln und das Modul patchen:
+      * _patch -p0 &lt; /pfad/zu/qwiki/pub/System/KerberosPlugin/assets/mod_auth_kerb-modac.patch_
    1 Modul kompilieren und installieren
       * _./configure && make && make install_
 
 *Hinweis: Der Patch ist für das Kerberos Modul in der Version 5.4 und Apache 2.2.x geschrieben. Für neuere Apache-Version (&gt;2.3) wird der Patch-Vorgang fehlschlagen. Grund sind Änderungen in der Apache API.*
+---+++ 
+---+++ Modul konfigurieren
+
+Debian
+   * Datei <strong>/etc/apache2/mods-available/auth_kerb.load </strong>anlegen mit Inhalt:
+<pre>
+LoadModule auth_kerb_module modules/mod_auth_kerb.so
+</pre>
+   * Anschließend Modul aktivieren
+<pre>
+a2enmod auth_kerb
+</pre>
+
+RedHat/CentOS
+   * Datei */etc/httpd/conf.d/auth_kerb.conf* anlegen mit Inhalt:
+<pre>
+LoadModule auth_kerb_module modules/mod_auth_kerb.so
+</pre>
 
 ---+++ Apache konfigurieren
 
@@ -35,7 +53,7 @@ Apache-Konfiguration anpassen:
 1. Eine neue Location-Direktive hinzufügen
 <pre>
 # Do NOT change this directive
-<Location bin=''>&lt;Location /bin/krblogin&gt;
+<location bin=''>&lt;Location /bin/krblogin&gt;
     AuthName KrbAuth
     AuthType Kerberos
     Krb5Keytab /path/to/keytab
@@ -44,7 +62,7 @@ Apache-Konfiguration anpassen:
     KrbMethodK5Passwd Off
     KrbAnonymousLogin Off      # &lt;--- this line is important!
     require valid-user
-</Location>&lt;/Location&gt;
+</location>&lt;/Location&gt;
 </pre>
 
 2. Authentifizierungsmechanismus für Foswikis "bin"-Ordner anpassen
@@ -67,6 +85,7 @@ Apache-Konfiguration anpassen:
 
 Die Einstellung {Plugins}{KerberosPlugin}{Realm} *muss* auf das aktuelle Authentifizierungs-Realm gesetzt werden.
 
+Sollen Benutzernamen durch LDAP aufgelöst werden, kann die Flag {Plugins}{KerberosPlugin}{UseLdap} gesetzt werden. *Vorher sicherstellen, dass LdapContrib installiert ist.*
 ---+++ Skin Einstellungen
 
 Das KerberosPlugin kommt mit einem neuen Template, =templates/viewtopbar.kerberos.tmpl=, welches den Login-Bereich überschreibt.
@@ -83,7 +102,7 @@ Das KerberosPlugin kommt mit einem neuen Template, =templates/viewtopbar.kerbero
 |  Author(s): | [[http://www.modell-aachen.de][Sven Meyer]] |
 |  Copyright: | © %GMTIME{"$year"}% [[http://www.modell-aachen.de][Modell Aachen GmbH]] |
 |  License: | [[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]] |
-|  Release: | 1.0 |
+|  Release: | 1.0.1 |
 |  Version: | 1001 (2013-04-02) |
 |  Change History: | <!-- versions below in reverse order --> |
 |  1.0 | Initial release |
