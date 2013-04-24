@@ -140,7 +140,7 @@ sub loadSession {
 
   my $user = Foswiki::LoginManager::loadSession( @_ );
   if ( $isLogout ) {
-    # Uncomment this force kerberos user to stay logged in
+    # Uncomment this to force kerberos authenticatd users to stay logged in
     # Foswiki::Func::setSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT", 0 );
   }
 
@@ -357,10 +357,16 @@ sub getUser {
   my $remoteUser = $query->remote_user();
   return unless $remoteUser;
 
+  my $tmpUser = $remoteUser;
+  $tmpUser =~ s/(.*)\@.*/$1/;
+  my @users = split( ',', $Foswiki::cfg{Plugins}{KerberosPlugin}{NonKerberosUsers} );
+  foreach my $user (@users) {
+    return if ( $user eq $tmpUser );
+  }
+
   my $stripRealm = $Foswiki::cfg{Plugins}{KerberosPlugin}{StripRealmFromLoginName};
   if ( $stripRealm ) {
-    $remoteUser =~ m/(.*)@.*/;
-    $remoteUser = $1;
+    $remoteUser =~ s/(.*)\@.*/$1/;
   }
   
   $self->userLoggedIn( $remoteUser );

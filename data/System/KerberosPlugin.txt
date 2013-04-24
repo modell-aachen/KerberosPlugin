@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="BaseUserMapping_333" comment="reprev" date="1366722853" format="1.1" reprev="9" version="9"}%
+%META:TOPICINFO{author="BaseUserMapping_333" comment="reprev" date="1366789585" format="1.1" reprev="9" version="10"}%
 ---+!! !KerberosPlugin
 
 Erweitert Foswikis TemplateLogin mit der Möglichkeit zur [[http://en.wikipedia.org/wiki/Kerberos_(protocol)][Kerberos]]-Anmeldung.
@@ -34,6 +34,7 @@ a2enmod auth_kerb
 
 RedHat/CentOS
    * Datei */etc/httpd/conf.d/auth_kerb.conf* anlegen mit Inhalt:
+
 <pre>
 LoadModule auth_kerb_module modules/mod_auth_kerb.so
 </pre>
@@ -86,11 +87,13 @@ Apache-Konfiguration anpassen:
 Die Einstellung {Plugins}{KerberosPlugin}{Realm} *muss* auf das aktuelle Authentifizierungs-Realm gesetzt werden.
 
 Sollen Benutzernamen durch LDAP aufgelöst werden, kann die Flag {Plugins}{KerberosPlugin}{UseLdap} gesetzt werden. *Vorher sicherstellen, dass LdapContrib installiert ist.*
+
+Um bestimmte Benutzer von der Kerberosauthentifizierung auszuschließen, kann deren Benutzername in das Feld {Plugins}{KerberosPlugin}{NonKerberosUsers} eingetragen werden. Mehrere Benutzer sind mit einem Komma (,) zu trennen.
 ---+++ Skin Einstellungen
 
 Das KerberosPlugin kommt mit einem neuen Template, =templates/viewtopbar.kerberos.tmpl=, welches den Login-Bereich überschreibt.
 <verbatim>
-    * Set SKIN = kerberos,modac
+    * Set SKIN = kerberos,custom,modac
 </verbatim>
 
 ---++ License
@@ -102,10 +105,12 @@ Das KerberosPlugin kommt mit einem neuen Template, =templates/viewtopbar.kerbero
 |  Author(s): | [[http://www.modell-aachen.de][Sven Meyer]] |
 |  Copyright: | © %GMTIME{"$year"}% [[http://www.modell-aachen.de][Modell Aachen GmbH]] |
 |  License: | [[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]] |
-|  Release: | 1.0.1 |
+|  Release: | 1.0.2 |
 |  Version: | 1001 (2013-04-02) |
 |  Change History: | <!-- versions below in reverse order --> |
-|  1.0 | Initial release |
+|  1.0.2 | NonKerberosUsers via Konfiguration |
+|  1.0.1 | Update Dokumentation |
+|  1.0.0 | Initial release |
 |  Dependencies: | <table border="1" class="foswikiTable"> <tbody> <tr> <th> Name</th> <th> Version</th> <th> Description</th> </tr> <tr> <td align="left"> Authen::Krb5::Simple</td> <td align="left"> &gt;=0</td> <td align="left"> Required</td> </tr> <tr> <td align="left"> Foswiki::Plugins::JQueryPlugin</td> <td align="left"> &gt;=0</td> <td align="left"> Required</td> </tr> <tr> <td align="left"> Foswiki::Contrib::ModacSkin</td> <td align="left"> &gt;=0</td> <td align="left"> Optional</td> </tr> </tbody> </table> |
 |  Home page: | http://www.modell-aachen.de |
 |  Support: | mailto:meyer@modell-aachen.de |
