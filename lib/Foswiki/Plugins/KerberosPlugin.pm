@@ -37,9 +37,6 @@ sub initPlugin {
 sub _handleLoginBar {
   my ( $session, $attrs, $topic, $web ) = @_;
 
-#DELETE ME
-#Foswiki::Func::setSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT", 0 );
-
   my $loginBar;
   Foswiki::Func::readTemplate( "krbloginbar" );
   my $prevAutoLogin = Foswiki::Func::getSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT" );

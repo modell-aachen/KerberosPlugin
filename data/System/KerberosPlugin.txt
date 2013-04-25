@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="BaseUserMapping_333" comment="reprev" date="1366789585" format="1.1" reprev="9" version="10"}%
+%META:TOPICINFO{author="BaseUserMapping_333" comment="reprev" date="1366800918" format="1.1" reprev="9" version="12"}%
 ---+!! !KerberosPlugin
 
 Erweitert Foswikis TemplateLogin mit der Möglichkeit zur [[http://en.wikipedia.org/wiki/Kerberos_(protocol)][Kerberos]]-Anmeldung.
@@ -10,6 +10,22 @@ Erweitert Foswikis TemplateLogin mit der Möglichkeit zur [[http://en.wikipedia.o
 Dieses Plugin bietet die Möglichkeit einer Kerberos-Anmeldung innerhalb des Wikis. Erfoderlich ist sowohl Javascript, als auch ein gepatchtes Apache Kerberos-Modul (mod_auth_kerb). Fügt ein Benutzer über ein gültiges TGT, wird dieser über Kerberos angemeldet. Andernfalls erfolgt ein Fallback auf den TemplateLogin.
 
 ---++ Installationsanleitung
+
+---+++ Perl
+
+Das Paket Authen::Krb5::Simple wird benötigt.
+
+Debian:
+<pre>
+aptitude install libauthen-krb5-simple-perl</pre>
+
+RedHat/CentOS
+<pre>yum install perl-Authen-Krb5-Simple</pre>
+---+++ 
+
+CPAN:
+<pre>
+install Authen::Krb5::Simple</pre>
 
 ---+++ Apache Modul: mod_auth_kerb
    1 Den Quelltext von mod_auth_kerb, Version 5.4 von [[http://sourceforge.net/projects/modauthkerb/?source=navbar][Sourceforge]] herunterladen und entpacken.
@@ -34,7 +50,6 @@ a2enmod auth_kerb
 
 RedHat/CentOS
    * Datei */etc/httpd/conf.d/auth_kerb.conf* anlegen mit Inhalt:
-
 <pre>
 LoadModule auth_kerb_module modules/mod_auth_kerb.so
 </pre>
