@@ -5,6 +5,7 @@ use warnings;
 use Assert;
 
 use Foswiki::LoginManager ();
+use Foswiki::Contrib::LdapContrib ();
 our @ISA = ( 'Foswiki::LoginManager' );
 
 use Authen::Krb5::Simple;
