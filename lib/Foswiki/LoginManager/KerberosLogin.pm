@@ -1,9 +1,9 @@
 package Foswiki::LoginManager::KerberosLogin;
 
 use strict;
-use warnings;
 use Assert;
 
+use utf8;
 use Foswiki::LoginManager ();
 use Foswiki::Contrib::LdapContrib ();
 our @ISA = ( 'Foswiki::LoginManager' );
@@ -25,7 +25,6 @@ sub new {
 
   $self->{UseLdap} = $Foswiki::cfg{Plugins}{KerberosPlugin}{UseLdap} || 0;
   eval {
-    require Foswiki::Contrib::LdapContrib;
     if ( $self->{UseLdap} ) {
       $self->{ldap} = Foswiki::Contrib::LdapContrib::getLdapContrib( $session );
     }
