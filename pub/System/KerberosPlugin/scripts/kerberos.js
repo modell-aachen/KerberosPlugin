@@ -1,9 +1,12 @@
 function krbUpdateStatus() {
+  var scriptPrefix = foswiki.getPreference( 'SCRIPTURLPATH' );
+  var scriptSuffix = foswiki.getPreference( 'SCRIPTSUFFIX' );
+  var usersWeb = foswiki.getPreference( 'USERSWEB' );
   var location = window.location.pathname;
-  location = location == "/" ? "/Main/WebHome" : location;
+  location = location == "/" ? usersWeb : location;
   $.ajax( {
     type: "GET",
-    url: "/bin/rest/KerberosPlugin/Update",
+    url: scriptPrefix + "/rest" + scriptSuffix + "/KerberosPlugin/Update",
     data: { "location": location },
     success: function( data, msg, xhr ) { 
        $('div#krb-autologin').fadeOut( "slow", function() {
@@ -17,10 +20,11 @@ function krbUpdateStatus() {
 }
 
 function krbAutoLogin() {
+  var scriptPrefix = foswiki.getPreference( 'SCRIPTURLPATH' );
   $( '#krb-placeholder' ).replaceWith( '<img src="/pub/System/KerberosPlugin/assets/processing-bg.gif" />' );
   $.ajax( {
     type: "GET",
-    url: "/bin/krblogin",
+    url: scriptPrefix + "/krblogin",
     success: function( data, msg, xhr ) { krbUpdateStatus(); },
     error: function( xhr, msg, err ) { krbUpdateStatus(); }
   } );
