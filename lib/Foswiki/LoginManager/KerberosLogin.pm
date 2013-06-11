@@ -421,16 +421,18 @@ sub login {
   my $error = '';
 
   if ( $loginName ) {
-    my $realm = $Foswiki::cfg{Plugins}{KerberosPlugin}{Realm};
-    my $kerberos = new Authen::Krb5::Simple( realm => $realm );
-    unless ( $realm ) {
+    my $defaultRealm = $Foswiki::cfg{Plugins}{KerberosPlugin}{DefaultRealm};
+    my $realms = $Foswiki::cfg{Plugins}{KerberosPlugin}{Realms};
+    my $kerberos = new Authen::Krb5::Simple();
+    
+    unless ( $defaultRealm && $realms ) {
       $session->{response}->status( 200 );
       $session->logger->log(
         {
           level    => 'info',
           action   => 'login',
           webTopic => $web . '.' . $topic,
-          extra    => "AUTHENTICATION FAILURE - Realm not specified or unreachable.",
+          extra    => "AUTHENTICATION FAILURE - Realm(s) not specified or unreachable.",
         }
       );
 
@@ -440,13 +442,23 @@ sub login {
     my $adminLogin = $loginName eq $Foswiki::cfg{AdminUserLogin} &&
         $Foswiki::cfg{Plugins}{KerberosPlugin}{DontUseKerberosForAdminUser};
     
-    if ( $realm || $adminLogin ) {
+    if ( $defaultRealm || $realms || $adminLogin ) {
       my $validation;
       if ( $adminLogin ) {
         $validation = $users->checkPassword( $loginName, $loginPass );
         $error = $users->passwordError($loginName);
       } else {
-        $validation = $kerberos->authenticate( $loginName, $loginPass ) if $realm;
+        if ( $loginName =~ m/^(.+)\\(.+)$/ ) {
+          $kerberos->realm( $realms->{$1} );
+          
+          # SMELL: verify loginName -> is it legal to cut off the domain??
+          $loginName = $2;
+          $validation = $kerberos->authenticate( $loginName, $loginPass ) if $realms;
+        } else {
+          $kerberos->realm( $realms->{$defaultRealm} ) if $defaultRealm;
+          $validation = $kerberos->authenticate( $loginName, $loginPass ) if $defaultRealm;
+        }
+        
         $error = $kerberos->errstr();
       }
 

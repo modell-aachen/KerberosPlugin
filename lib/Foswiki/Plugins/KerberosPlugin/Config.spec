@@ -2,9 +2,16 @@
 #---++ KerberosPlugin
 # Enables Kerberos authentication
 
+# **PERL**
+# List of all domains and sub-domains.
+$Foswiki::cfg{Plugins}{KerberosPlugin}{Realms} = {
+    'ACME' => 'ACME.LOCAL',
+    'SUB' => 'SUB.ACME.LOCAL'
+};
+
 # **STRING 100**
-# The Kerberos realm used for authentication.
-$Foswiki::cfg{Plugins}{KerberosPlugin}{Realm} = '';
+# The default realm used for authentication without specifying a prefix(NETBIOS domain name).
+$Foswiki::cfg{Plugins}{KerberosPlugin}{DefaultRealm} = 'ACME';
 
 # **STRING**
 # A comma separated list of usernames which are forced to authenticated by username and password
