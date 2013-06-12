@@ -4,8 +4,8 @@ use strict;
 use Foswiki::Func ();
 use Foswiki::Plugins ();
 
-our $VERSION = "1.0.10";
-our $RELEASE = "1.0.10";
+our $VERSION = "1.0.11";
+our $RELEASE = "1.0.11";
 our $NO_PREFS_IN_TOPIC = 1;
 our $SHORTDESCRIPTION = "Enables wiki-based Kerberos authentication.";
 
@@ -40,7 +40,26 @@ sub _handleLoginBar {
   my $loginBar;
   Foswiki::Func::readTemplate( "krbloginbar" );
   my $prevAutoLogin = Foswiki::Func::getSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT" );
-  unless( $prevAutoLogin ) {
+  
+  my $request = $session->{request};
+  my $pathInfo = $request->pathInfo();
+
+  my $web = $Foswiki::cfg{UsersWebName};
+  my $topic = $Foswiki::cfg{HomeTopicName};
+  unless ( $pathInfo eq "/" ) {
+    if ( $pathInfo =~ m/\/(.+)\/(.+)/ ) {
+      $web = $1;
+      $topic = $2;
+    }
+  }
+  
+  my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
+  my $isRedirect = 0;
+  if ( $text =~ /%REDIRECT{.+}%/ ) {
+    $isRedirect = 1;
+  }
+  
+  unless( $prevAutoLogin || $isRedirect ) {
     my $success = Foswiki::Func::setSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT", 1 );
     Foswiki::Func::writeWarning( "Error setting 'KRB_PREV_AUTO_LOGIN_ATTEMPT'" ) unless( $success );
     $loginBar = Foswiki::Func::expandTemplate( "krb::autologin" );
