@@ -4,8 +4,8 @@ use strict;
 use Foswiki::Func ();
 use Foswiki::Plugins ();
 
-our $VERSION = "1.0.11";
-our $RELEASE = "1.0.11";
+our $VERSION = "1.0.12";
+our $RELEASE = "1.0.12";
 our $NO_PREFS_IN_TOPIC = 1;
 our $SHORTDESCRIPTION = "Enables wiki-based Kerberos authentication.";
 
@@ -44,16 +44,16 @@ sub _handleLoginBar {
   my $request = $session->{request};
   my $pathInfo = $request->pathInfo();
 
-  my $web = $Foswiki::cfg{UsersWebName};
-  my $topic = $Foswiki::cfg{HomeTopicName};
+  my $w = $Foswiki::cfg{UsersWebName};
+  my $t = $Foswiki::cfg{HomeTopicName};
   unless ( $pathInfo eq "/" ) {
     if ( $pathInfo =~ m/\/(.+)\/(.+)/ ) {
-      $web = $1;
-      $topic = $2;
+      $w = $1;
+      $t = $2;
     }
   }
   
-  my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
+  my ( $meta, $text ) = Foswiki::Func::readTopic( $w, $t );
   my $isRedirect = 0;
   if ( $text =~ /%REDIRECT{.+}%/ ) {
     $isRedirect = 1;
