@@ -25,7 +25,29 @@ function krbAutoLogin() {
   $.ajax( {
     type: "GET",
     url: scriptPrefix + "/krblogin",
-    success: function( data, msg, xhr ) { krbUpdateStatus(); },
-    error: function( xhr, msg, err ) { krbUpdateStatus(); }
+    success: function( data, msg, xhr ) {
+      krbUpdateStatus();
+      
+      // attachTable ersetzen (fix für edit-icons nach auto-login)
+      var oldTable = $( "div.foswikiAttachments.foswikiFormStep" );
+      $(oldTable).fadeOut( "slow", function() {
+        var newTable = $(data).find( "div.foswikiAttachments.foswikiFormStep" );
+        $(newTable).hide();
+        $(this).replaceWith( newTable );
+        
+        var pubUrl = foswiki.getPreference( 'PUBURL' );
+        var scriptUrl = pubUrl + "/System/WebDAVLinkPlugin/webdavlink.js";
+        $.ajax({
+          url: scriptUrl,
+          dataType: "script",
+          complete: function( jqxhr, status ) {
+            $(newTable).fadeIn( "slow" );
+          }
+        });
+      } );
+    },
+    error: function( xhr, msg, err ) {
+      krbUpdateStatus();
+    }
   } );
 }
