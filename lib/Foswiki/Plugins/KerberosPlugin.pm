@@ -4,8 +4,8 @@ use strict;
 use Foswiki::Func ();
 use Foswiki::Plugins ();
 
-our $VERSION = "1.0.13";
-our $RELEASE = "1.0.13";
+our $VERSION = "1.0.14";
+our $RELEASE = "1.0.14";
 our $NO_PREFS_IN_TOPIC = 1;
 our $SHORTDESCRIPTION = "Enables wiki-based Kerberos authentication.";
 
