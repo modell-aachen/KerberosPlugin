@@ -1,3 +1,47 @@
+(function($) {
+  
+  $(document).ready( function() {
+    if ( foswiki.preferences.KERBEROSAUTOLOGIN == 1 ) {
+      return;
+    }
+    
+    var login = $('div#foswikiLogin');
+    if ( login == undefined ) return;
+    var form = $(login).find('form');
+    var steps = $(form).find('div.foswikiFormStep');
+    $.each( steps, function( i, v) {
+      if ( i != 0 ) {
+        $(v).hide();
+      }
+    });
+
+    var pubUrl = foswiki.getPreference( 'PUBURL' );
+    $(form).append( '<div class="foswikiFormStep KerberosPlugin"><img src="' + pubUrl +'/System/KerberosPlugin/assets/processing-bg.gif" />&nbsp;Please wait...</tmp>' );
+    
+    var scriptPrefix = foswiki.getPreference( 'SCRIPTURLPATH' );
+    $.ajax( {
+      type: "GET",
+      url: scriptPrefix + "/krblogin",
+      success: function( data, msg, xhr ) {
+        krbUpdateStatus();
+        var web = foswiki.getPreference('WEB');
+        var topic = foswiki.getPreference('TOPIC');
+        var url = "/" + web + "/" + topic;
+        window.location.href = url;
+      },
+      error: function( x, m, e ) {
+        krbUpdateStatus();
+        $(form).find('div.KerberosPlugin').remove();
+        $.each( steps, function( i, v) {
+          if ( i != 0 ) {
+            $(v).fadeIn( 'slow' );
+          }
+        } );
+      }
+    } );
+  } );
+} )(jQuery);
+
 function krbUpdateStatus() {
   var scriptPrefix = foswiki.getPreference( 'SCRIPTURLPATH' );
   var scriptSuffix = foswiki.getPreference( 'SCRIPTSUFFIX' );
@@ -20,30 +64,38 @@ function krbUpdateStatus() {
 }
 
 function krbAutoLogin() {
+  var pubUrl = foswiki.getPreference( 'PUBURL' );
   var scriptPrefix = foswiki.getPreference( 'SCRIPTURLPATH' );
-  $( '#krb-placeholder' ).replaceWith( '<img src="/pub/System/KerberosPlugin/assets/processing-bg.gif" />' );
+  $( '#krb-placeholder' ).replaceWith( '<img src="' + pubUrl +'/System/KerberosPlugin/assets/processing-bg.gif" />' );
   $.ajax( {
     type: "GET",
     url: scriptPrefix + "/krblogin",
     success: function( data, msg, xhr ) {
       krbUpdateStatus();
       
-      // attachTable ersetzen (fix für edit-icons nach auto-login)
-      var oldTable = $( "div.foswikiAttachments.foswikiFormStep" );
-      $(oldTable).fadeOut( "slow", function() {
-        var newTable = $(data).find( "div.foswikiAttachments.foswikiFormStep" );
-        $(newTable).hide();
-        $(this).replaceWith( newTable );
-        
-        var pubUrl = foswiki.getPreference( 'PUBURL' );
-        var scriptUrl = pubUrl + "/System/WebDAVLinkPlugin/webdavlink.js";
-        $.ajax({
-          url: scriptUrl,
-          dataType: "script",
-          complete: function( jqxhr, status ) {
-            $(newTable).fadeIn( "slow" );
+      var web = foswiki.getPreference( 'WEB' );
+      var topic = foswiki.getPreference( 'TOPIC' );
+      var url = '/' + web + '/' + topic;
+      $.ajax( {
+        type: "GET",
+        url: url,
+        success: function( d, m, x ) {
+          var newStyle = undefined;
+          $(d).filter('style').each( function() {
+            var text = $(this).text();
+            if ( text.search( 'requireModacChangePermission' ) >= 0 ) {
+              newStyle = text;
+            }
+          } );
+          
+          if ( newStyle == undefined ) {
+            return;
           }
-        });
+          
+          $('head').find("style:contains('.requireModacChangePermission')").each( function() {
+            $(this).replaceWith( newStyle );
+          } );
+        }
       } );
     },
     error: function( xhr, msg, err ) {

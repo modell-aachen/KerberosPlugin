@@ -31,6 +31,21 @@ sub initPlugin {
 
   my %restOpts = ( "authenticate", 0, "http_allow", "GET" );
   Foswiki::Func::registerRESTHandler( "Update", \&_restUpdateLoginBar, %restOpts );
+  
+  my $prevAutoLogin = 0;
+  eval {
+    $prevAutoLogin = Foswiki::Func::getSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT" );
+  };
+  Foswiki::Func::addToZone( "script", "KERBEROSPLUGIN", <<STUFF, "JQUERYPLUGIN::FOSWIKI::PREFERENCES" );
+<script type='text/javascript'>
+jQuery.extend(
+  foswiki.preferences, {
+    "KERBEROSAUTOLOGIN": "$prevAutoLogin"
+  }
+);
+</script>
+STUFF
+  
   return 1;
 }
 
