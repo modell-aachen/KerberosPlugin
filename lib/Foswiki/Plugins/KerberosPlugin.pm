@@ -4,8 +4,8 @@ use strict;
 use Foswiki::Func ();
 use Foswiki::Plugins ();
 
-our $VERSION = "1.0.14";
-our $RELEASE = "1.0.14";
+our $VERSION = "1.0.15";
+our $RELEASE = "1.0.15";
 our $NO_PREFS_IN_TOPIC = 1;
 our $SHORTDESCRIPTION = "Enables wiki-based Kerberos authentication.";
 
@@ -32,11 +32,9 @@ sub initPlugin {
   my %restOpts = ( "authenticate", 0, "http_allow", "GET" );
   Foswiki::Func::registerRESTHandler( "Update", \&_restUpdateLoginBar, %restOpts );
   
-  my $prevAutoLogin = 0;
   eval {
-    $prevAutoLogin = Foswiki::Func::getSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT" );
-  };
-  Foswiki::Func::addToZone( "script", "KERBEROSPLUGIN", <<STUFF, "JQUERYPLUGIN::FOSWIKI::PREFERENCES" );
+    my $prevAutoLogin = Foswiki::Func::getSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT" ) || 0;
+    Foswiki::Func::addToZone( "script", "KERBEROSPLUGIN", <<STUFF, "JQUERYPLUGIN::FOSWIKI::PREFERENCES" );
 <script type='text/javascript'>
 jQuery.extend(
   foswiki.preferences, {
@@ -45,6 +43,7 @@ jQuery.extend(
 );
 </script>
 STUFF
+  };
   
   return 1;
 }
