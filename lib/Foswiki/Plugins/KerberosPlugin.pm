@@ -4,8 +4,8 @@ use strict;
 use Foswiki::Func ();
 use Foswiki::Plugins ();
 
-our $VERSION = "1.0.15";
-our $RELEASE = "1.0.15";
+our $VERSION = "1.0.16";
+our $RELEASE = "1.0.16";
 our $NO_PREFS_IN_TOPIC = 1;
 our $SHORTDESCRIPTION = "Enables wiki-based Kerberos authentication.";
 
@@ -31,7 +31,7 @@ sub initPlugin {
 
   my %restOpts = ( "authenticate", 0, "http_allow", "GET" );
   Foswiki::Func::registerRESTHandler( "Update", \&_restUpdateLoginBar, %restOpts );
-  
+
   eval {
     my $prevAutoLogin = Foswiki::Func::getSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT" ) || 0;
     Foswiki::Func::addToZone( "script", "KERBEROSPLUGIN", <<STUFF, "JQUERYPLUGIN::FOSWIKI::PREFERENCES" );
@@ -44,7 +44,7 @@ jQuery.extend(
 </script>
 STUFF
   };
-  
+
   return 1;
 }
 
@@ -54,7 +54,7 @@ sub _handleLoginBar {
   my $loginBar;
   Foswiki::Func::readTemplate( "krbloginbar" );
   my $prevAutoLogin = Foswiki::Func::getSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT" );
-  
+
   my $request = $session->{request};
   my $pathInfo = $request->pathInfo();
 
@@ -66,13 +66,13 @@ sub _handleLoginBar {
       $t = $2;
     }
   }
-  
+
   my ( $meta, $text ) = Foswiki::Func::readTopic( $w, $t );
   my $isRedirect = 0;
   if ( $text =~ /%REDIRECT{.+}%/ ) {
     $isRedirect = 1;
   }
-  
+
   unless( $prevAutoLogin || $isRedirect ) {
     my $success = Foswiki::Func::setSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT", 1 );
     Foswiki::Func::writeWarning( "Error setting 'KRB_PREV_AUTO_LOGIN_ATTEMPT'" ) unless( $success );

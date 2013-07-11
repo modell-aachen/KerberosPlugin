@@ -29,11 +29,11 @@ sub new {
       $self->{ldap} = Foswiki::Contrib::LdapContrib::getLdapContrib( $session );
     }
   };
-  
+
   unless ( $@ ) {
     $self->{hasLdap} = 1;
   }
-  
+
   Foswiki::registerTagHandler( 'LOGIN', \&_handleLogin );
   Foswiki::registerTagHandler( 'LOGOUT', \&_handleLogout );
 
@@ -70,7 +70,7 @@ sub _handleLogout {
   } else {
     my $web = $session->{prefs}->getPreference( 'BASEWEB' );
     my $topic = $session->{prefs}->getPreference( 'BASETOPIC' );
-    $url = $session->getScriptUrl( 0, 'view', $web, $topic, 'logout' => 1 );  
+    $url = $session->getScriptUrl( 0, 'view', $web, $topic, 'logout' => 1 );
   }
 
   return '' unless $url;
@@ -82,11 +82,11 @@ sub _packRequest {
   return '' unless $uri;
   if ( ref( $uri ) ) {
     my $r = $uri->{request};
-    
+
     $uri    = $r->uri();
     $method = $r->method() || 'UNDEFINED';
     $action = $r->action();
-    
+
     if ( $action eq "rest" ) {
       $action = "view";
       my $location = ( defined $r->{param}->{location} ? $r->{param}->{location}[0] : undef );
@@ -234,7 +234,18 @@ sub loadSession {
           if ( !defined($authUser)
             || $sessionUser && $sessionUser eq $Foswiki::cfg{AdminUserLogin} );
     }
-    
+
+
+
+    # Fix für SwitchableLogin
+    my $sudoEnabled = $Foswiki::cfg{SwitchableLoginManagerContrib}{SudoEnabled} &&
+      $Foswiki::cfg{SwitchableLoginManagerContrib}{SudoAuth} ne 'changeme!';
+    my $sudo = $session->{request}->param('sudouser');
+    my $sudoauth = $session->{request}->param('sudoauth');
+    if ( $sudoEnabled && $sudo ) {
+      $authUser = $self->getUser();
+    }
+
     if ( !$authUser ) {
         # if we couldn't get the login manager or the http session to tell
         # us who the user is, check the username and password URI params.
@@ -260,7 +271,7 @@ sub loadSession {
                     }
                 }    # TODO: implement FoswikiDigest here
             }
-            
+
             # Wird der IE einmal aufgefordert einen Negotiation-Header zu schicken, wird
             # er diesen immer wieder mitschicken.
             # Die folgenden Zeilen dienen daher als Hotfix, um einen Kerberos-Logout zu ermöglichen.
@@ -268,7 +279,7 @@ sub loadSession {
             my $krbLoggedOut = Foswiki::Func::getSessionValue( "KRB_LOGOUT" );
             unless ( $krbLoggedOut ) {
               $authUser = $self->getUser( $self );
-            }          
+            }
         }
 
         if ( $login && defined $pass && $pwchecker ) {
@@ -310,7 +321,7 @@ sub loadSession {
         # Wir setzen die Session-Var KRB_LOGOUT, die signalisiert, dass der Apache User
         # ignoriert werden soll.
         Foswiki::Func::setSessionValue( "KRB_LOGOUT", "1" );
-        
+
         # SMELL: is there any way to get evil data into the CGI session such
         # that this untaint is less than safe?
         my $sudoUser = Foswiki::Sandbox::untaintUnchecked(
@@ -424,7 +435,7 @@ sub login {
     my $defaultRealm = $Foswiki::cfg{Plugins}{KerberosPlugin}{DefaultRealm};
     my $realms = $Foswiki::cfg{Plugins}{KerberosPlugin}{Realms};
     my $kerberos = new Authen::Krb5::Simple();
-    
+
     unless ( $defaultRealm && $realms ) {
       $session->{response}->status( 200 );
       $session->logger->log(
@@ -441,7 +452,7 @@ sub login {
 
     my $adminLogin = $loginName eq $Foswiki::cfg{AdminUserLogin} &&
         $Foswiki::cfg{Plugins}{KerberosPlugin}{DontUseKerberosForAdminUser};
-    
+
     if ( $defaultRealm || $realms || $adminLogin ) {
       my $validation;
       if ( $adminLogin ) {
@@ -450,7 +461,7 @@ sub login {
       } else {
         if ( $loginName =~ m/^(.+)\\(.+)$/ ) {
           $kerberos->realm( $realms->{$1} );
-          
+
           # SMELL: verify loginName -> is it legal to cut off the domain??
           $loginName = $2;
           $validation = $kerberos->authenticate( $loginName, $loginPass ) if $realms;
@@ -458,7 +469,7 @@ sub login {
           $kerberos->realm( $realms->{$defaultRealm} ) if $defaultRealm;
           $validation = $kerberos->authenticate( $loginName, $loginPass ) if $defaultRealm;
         }
-        
+
         $error = $kerberos->errstr();
       }
 
@@ -483,7 +494,7 @@ sub login {
         $query->delete( 'sudo' );
 
         $cgisession->param( 'VALIDATION', $validation ) if $cgisession;
-        
+
         if ( !$origurl || $origurl eq $query->url() ) {
           $origurl = $session->getScriptUrl( 0, 'view', $web, $topic );
         } else {
@@ -523,10 +534,10 @@ sub login {
             extra    => "AUTHENTICATION FAILURE - $loginName - ",
           }
         );
-      
+
        $banner = $session->templates->expandTemplate( 'UNRECOGNISED_USER' );
       }
-    } 
+    }
   } else {
     # If the loginName is unset, then the request was likely a perfectly
     # valid GET call to http://foswiki/bin/login
@@ -574,8 +585,8 @@ sub login {
 sub getUser {
   my $self = shift;
   my $query = $self->{session}->{request};
-  return unless $query;
 
+  return unless $query;
   my $remoteUser = $query->remote_user();
   return unless $remoteUser;
 
@@ -590,7 +601,7 @@ sub getUser {
   if ( $stripRealm ) {
     $remoteUser =~ s/(.*)\@.*/$1/;
   }
-  
+
   $self->userLoggedIn( $remoteUser );
   return $remoteUser;
 }
