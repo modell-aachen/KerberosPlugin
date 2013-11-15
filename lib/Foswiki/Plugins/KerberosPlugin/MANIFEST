@@ -1,0 +1,15 @@
+!noci
+data/System/KerberosPlugin.txt 0644
+data/System/WebTopBarKerberos.txt 0644
+lib/Foswiki/Plugins/KerberosPlugin.pm 0644
+lib/Foswiki/Plugins/KerberosPlugin/Config.spec 0644
+lib/Foswiki/LoginManager/KerberosLogin.pm 0644
+pub/System/KerberosPlugin/assets/dog-ring.jpg 0644
+pub/System/KerberosPlugin/assets/mod_auth_kerb-modac.patch 0644
+pub/System/KerberosPlugin/assets/processing-bg.gif 0644
+pub/System/KerberosPlugin/assets/user-icon.png 0644
+pub/System/KerberosPlugin/scripts/kerberos.js 0644
+pub/System/KerberosPlugin/styles/kerberos.css 0644
+templates/krbloginbar.tmpl 0644
+templates/krbmessages.tmpl 0644
+templates/viewtopbar.kerberos.tmpl 0644

@@ -1,0 +1,9 @@
+div#krb-autologin,
+div#krb-login,
+div#krb-logout {
+  background: transparent;
+}
+
+div#krb-wrapper {
+  height: 20px;
+}
