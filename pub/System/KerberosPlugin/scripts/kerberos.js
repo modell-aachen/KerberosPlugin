@@ -1,10 +1,10 @@
 (function($) {
-  
+
   $(document).ready( function() {
     if ( foswiki.preferences.KERBEROSAUTOLOGIN == 1 ) {
       return;
     }
-    
+
     var login = $('div#foswikiLogin');
     if ( login == undefined ) return;
     var form = $(login).find('form');
@@ -17,16 +17,18 @@
 
     var pubUrl = foswiki.getPreference( 'PUBURL' );
     $(form).append( '<div class="foswikiFormStep KerberosPlugin"><img src="' + pubUrl +'/System/KerberosPlugin/assets/processing-bg.gif" />&nbsp;Please wait...</tmp>' );
-    
+
     var scriptPrefix = foswiki.getPreference( 'SCRIPTURLPATH' );
     $.ajax( {
       type: "GET",
       url: scriptPrefix + "/krblogin",
       success: function( data, msg, xhr ) {
         krbUpdateStatus();
+        var scriptUrl = foswiki.getPreference( 'SCRIPTURL' ):
+        var scriptSuffix = foswiki.getPreference( 'SCRIPTSUFFIX' );
         var web = foswiki.getPreference('WEB');
         var topic = foswiki.getPreference('TOPIC');
-        var url = "/" + web + "/" + topic;
+        var url = scriptUrl '/view' + scriptSuffix + '/' + web + '/' + topic;
         window.location.href = url;
       },
       error: function( x, m, e ) {
@@ -52,7 +54,7 @@ function krbUpdateStatus() {
     type: "GET",
     url: scriptPrefix + "/rest" + scriptSuffix + "/KerberosPlugin/Update",
     data: { "location": location },
-    success: function( data, msg, xhr ) { 
+    success: function( data, msg, xhr ) {
        $('div#krb-autologin').fadeOut( "slow", function() {
          var div = $(data).hide();
          $(this).replaceWith( data );
@@ -72,10 +74,12 @@ function krbAutoLogin() {
     url: scriptPrefix + "/krblogin",
     success: function( data, msg, xhr ) {
       krbUpdateStatus();
-      
-      var web = foswiki.getPreference( 'WEB' );
-      var topic = foswiki.getPreference( 'TOPIC' );
-      var url = '/' + web + '/' + topic;
+
+      var scriptUrl = foswiki.getPreference( 'SCRIPTURL' ):
+      var scriptSuffix = foswiki.getPreference( 'SCRIPTSUFFIX' );
+      var web = foswiki.getPreference('WEB');
+      var topic = foswiki.getPreference('TOPIC');
+      var url = scriptUrl '/view' + scriptSuffix + '/' + web + '/' + topic;
       $.ajax( {
         type: "GET",
         url: url,
@@ -87,11 +91,11 @@ function krbAutoLogin() {
               newStyle = text;
             }
           } );
-          
+
           if ( newStyle == undefined ) {
             return;
           }
-          
+
           $('head').find("style:contains('.requireModacChangePermission')").each( function() {
             $(this).replaceWith( newStyle );
           } );
