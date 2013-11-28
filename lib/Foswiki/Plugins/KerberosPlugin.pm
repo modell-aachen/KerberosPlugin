@@ -70,6 +70,7 @@ sub _handleLoginBar {
   my ( $meta, $text ) = Foswiki::Func::readTopic( $w, $t );
   my $isRedirect = 0;
   if ( $text =~ /%REDIRECT{.+}%/ ) {
+  if ( $text && $text =~ /%REDIRECT{.+}%/ ) {
     $isRedirect = 1;
   }
 
