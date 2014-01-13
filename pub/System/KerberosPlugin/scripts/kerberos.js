@@ -24,11 +24,11 @@
       url: scriptPrefix + "/krblogin",
       success: function( data, msg, xhr ) {
         krbUpdateStatus();
-        var scriptUrl = foswiki.getPreference( 'SCRIPTURL' ):
+        var scriptUrl = foswiki.getPreference( 'SCRIPTURL' );
         var scriptSuffix = foswiki.getPreference( 'SCRIPTSUFFIX' );
         var web = foswiki.getPreference('WEB');
         var topic = foswiki.getPreference('TOPIC');
-        var url = scriptUrl '/view' + scriptSuffix + '/' + web + '/' + topic;
+        var url = scriptUrl + '/view' + scriptSuffix + '/' + web + '/' + topic;
         window.location.href = url;
       },
       error: function( x, m, e ) {
@@ -75,11 +75,11 @@ function krbAutoLogin() {
     success: function( data, msg, xhr ) {
       krbUpdateStatus();
 
-      var scriptUrl = foswiki.getPreference( 'SCRIPTURL' ):
+      var scriptUrl = foswiki.getPreference( 'SCRIPTURL' );
       var scriptSuffix = foswiki.getPreference( 'SCRIPTSUFFIX' );
       var web = foswiki.getPreference('WEB');
       var topic = foswiki.getPreference('TOPIC');
-      var url = scriptUrl '/view' + scriptSuffix + '/' + web + '/' + topic;
+      var url = scriptUrl + '/view' + scriptSuffix + '/' + web + '/' + topic;
       $.ajax( {
         type: "GET",
         url: url,
