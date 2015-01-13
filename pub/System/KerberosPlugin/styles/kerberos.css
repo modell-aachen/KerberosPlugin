@@ -5,5 +5,6 @@ div#krb-logout {
 }
 
 div#krb-wrapper {
+  display: inline-block;
   height: 20px;
 }
