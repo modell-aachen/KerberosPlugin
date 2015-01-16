@@ -350,7 +350,7 @@ sub loadSession {
     if ( $self->{hasLdap} && $self->{UseLdap} && $self->{DenyNonLdapUser} ) {
       my $user = $authUser;
       my $account = $self->{ldap}->getAccount($user);
-      $authUser = $Foswiki::cfg{DefaultUserWikiName} unless defined $account;
+      $authUser = $Foswiki::cfg{DefaultUserLogin} unless defined $account;
     }
 
     $self->userLoggedIn($authUser);
