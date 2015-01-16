@@ -24,6 +24,7 @@ sub new {
   }
 
   $self->{UseLdap} = $Foswiki::cfg{Plugins}{KerberosPlugin}{UseLdap} || 0;
+  $self->{DenyNonLdapUser} = $Foswiki::cfg{Plugins}{KerberosPlugin}{DenyNonLdapUser} || 0;
   eval {
     if ( $self->{UseLdap} ) {
       $self->{ldap} = Foswiki::Contrib::LdapContrib::getLdapContrib( $session );
@@ -345,6 +346,12 @@ sub loadSession {
         }
     }
     $session->{request}->delete('logout');
+
+    if ( $self->{hasLdap} && $self->{UseLdap} && $self->{DenyNonLdapUser} ) {
+      my $user = $authUser;
+      my $account = $self->{ldap}->getAccount($user);
+      $authUser = $Foswiki::cfg{DefaultUserWikiName} unless defined $account;
+    }
 
     $self->userLoggedIn($authUser);
 

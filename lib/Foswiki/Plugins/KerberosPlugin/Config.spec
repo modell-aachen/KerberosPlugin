@@ -22,6 +22,10 @@ $Foswiki::cfg{Plugins}{KerberosPlugin}{NonKerberosUsers} = '';
 $Foswiki::cfg{Plugins}{KerberosPlugin}{UseLdap} = 0;
 
 # **BOOLEAN**
+# Requires package LdapContrib. Deny login for users who aren't found by LDAP
+$Foswiki::cfg{Plugins}{KerberosPlugin}{DenyNonLdapUser} = 0;
+
+# **BOOLEAN**
 $Foswiki::cfg{Plugins}{KerberosPlugin}{PreventBrowserRememberingPassword} = 0;
 
 # **BOOLEAN**
