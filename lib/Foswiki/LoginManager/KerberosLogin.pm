@@ -603,7 +603,7 @@ sub getUser {
   }
 
   if ( $self->{hasLdap} && $self->{UseLdap} && $self->{DenyNonLdapUser} ) {
-    my $account = $self->{ldap}->getAccount($remote_user);
+    my $account = $self->{ldap}->getAccount($remoteUser);
     Foswiki::Func::setSessionValue( "KRB_PREV_AUTO_LOGIN_ATTEMPT", 1 );
     return unless defined $account;
   }
