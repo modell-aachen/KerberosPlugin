@@ -372,9 +372,8 @@ sub loadSession {
     if ( defined $authUser ) {
       $authUser =~ s/^\s+//o;
       $authUser =~ s/\s+$//o;
-      $authUser = $self->{ldap}->fromUtf8( $authUser );
 
-      $authUser = $self->{ldap}->locale_lc( $authUser ) if ( $self->{ldap}{caseSensitivity} eq 'off' );
+      $authUser = lc( $authUser ) if ( $self->{ldap}{caseSensitivity} eq 'off' );
       $authUser = $self->{ldap}->normalizeLoginName( $authUser ) if $self->{ldap}{normalizeLoginName};
 
       unless ( $self->{ldap}{excludeMap}{$authUser} ) {
