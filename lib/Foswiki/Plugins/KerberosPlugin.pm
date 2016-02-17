@@ -102,7 +102,7 @@ sub _handleKrbUser {
     return $user;
   }
 
-  return $wikiName;
+  return Foswiki::Func::wikiToUserName($wikiName);
 }
 
 sub _restUpdateLoginBar {
