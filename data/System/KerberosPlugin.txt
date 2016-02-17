@@ -48,9 +48,9 @@ place for =/bin/krblogin= and is optional for all other =bin= pathes.
   ...
 
   AuthType Kerberos
-  KrbAuthRealm MA.LAN
-  KrbServiceName HTTP/qwiki.ma.lan
-  Krb5Keytab /etc/http.keytab
+  KrbAuthRealm ACME.LOCAL
+  KrbServiceName HTTP/webserver.acme.local
+  Krb5Keytab /path/to/keytab
   KrbMethodNegotiate on
   KrbMethodK5Passwd off
 
