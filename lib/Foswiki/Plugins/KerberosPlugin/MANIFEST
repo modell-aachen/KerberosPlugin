@@ -13,3 +13,4 @@ pub/System/KerberosPlugin/styles/kerberos.css 0644
 templates/krbloginbar.tmpl 0644
 templates/krbmessages.tmpl 0644
 templates/viewtopbar.kerberos.tmpl 0644
+bin/krblogin 0744

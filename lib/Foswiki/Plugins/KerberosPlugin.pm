@@ -128,4 +128,8 @@ sub _isGuestSession {
   return ( $wikiGuest eq $wikiName );
 }
 
+sub dispatchSwitchboard {
+  return '';
+}
+
 1;
