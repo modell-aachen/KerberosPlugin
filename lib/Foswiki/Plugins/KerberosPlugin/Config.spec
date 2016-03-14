@@ -33,3 +33,7 @@ $Foswiki::cfg{Plugins}{KerberosPlugin}{DontUseKerberosForAdminUser} = 0;
 
 # **BOOLEAN**
 $Foswiki::cfg{Plugins}{KerberosPlugin}{StripRealmFromLoginName} = 0;
+
+# **PERL H** 
+# This setting is required to enable executing jsonrpc from the bin directory
+$Foswiki::cfg{SwitchBoard}{krblogin} = ['Foswiki::Plugins::KerberosPlugin', 'dispatchSwitchboard', {}];

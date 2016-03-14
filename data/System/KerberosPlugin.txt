@@ -1,132 +1,111 @@
-%META:TOPICINFO{author="BaseUserMapping_333" comment="reprev" date="1366800918" format="1.1" reprev="9" version="12"}%
 ---+!! !KerberosPlugin
 
-Erweitert Foswikis TemplateLogin mit der Möglichkeit zur [[http://en.wikipedia.org/wiki/Kerberos_(protocol)][Kerberos]]-Anmeldung.
+%JQREQUIRE{"chili"}%
+%SHORTDESCRIPTION%
 
 %TOC%
 
----++ Verwendung
+---++ Installation
+%$INSTALL_INSTRUCTIONS%
 
-Dieses Plugin bietet die Möglichkeit einer Kerberos-Anmeldung innerhalb des Wikis. Erfoderlich ist sowohl Javascript, als auch ein gepatchtes Apache Kerberos-Modul (mod_auth_kerb). Fügt ein Benutzer über ein gültiges TGT, wird dieser über Kerberos angemeldet. Andernfalls erfolgt ein Fallback auf den TemplateLogin.
+---+++ Dependencies
+=KerberosPlugin= requires Perl package =Authen::Krb5::Simple=.
+Most distributions offer a binary package within their repositories:
 
----++ Installationsanleitung
+*Debian:*
+<verbatim class="bash">aptitude install libauthen-krb5-simple-perl</verbatim>
 
----+++ Perl
+*Red Hat/CentOS:*
+<verbatim class="bash">yum install perl-Authen-Krb5-Simple</verbatim>
 
-Das Paket Authen::Krb5::Simple wird benötigt.
+*CPAN:*
+<verbatim class="bash">install Authen::Krb5::Simple</verbatim>
 
-Debian:
-<pre>
-aptitude install libauthen-krb5-simple-perl</pre>
+---+++ Apache configuration
+Change your Apache configuration as shown below. Basically authentication takes
+place for =/bin/krblogin= and is optional for all other =bin= pathes.
 
-RedHat/CentOS
-<pre>yum install perl-Authen-Krb5-Simple</pre>
----+++ 
-
-CPAN:
-<pre>
-install Authen::Krb5::Simple</pre>
-
----+++ Apache Modul: mod_auth_kerb
-   1 Den Quelltext von mod_auth_kerb, Version 5.4 von [[http://sourceforge.net/projects/modauthkerb/?source=navbar][Sourceforge]] herunterladen und entpacken.
-   1 In das Verzeichnis wechseln und das Modul patchen:
-      * _patch -p0 &lt; /pfad/zu/qwiki/pub/System/KerberosPlugin/assets/mod_auth_kerb-modac.patch_
-   1 Modul kompilieren und installieren
-      * _./configure && make && make install_
-
-*Hinweis: Der Patch ist für das Kerberos Modul in der Version 5.4 und Apache 2.2.x geschrieben. Für neuere Apache-Version (&gt;2.3) wird der Patch-Vorgang fehlschlagen. Grund sind Änderungen in der Apache API.*
----+++ 
----+++ Modul konfigurieren
-
-Debian
-   * Datei <strong>/etc/apache2/mods-available/auth_kerb.load </strong>anlegen mit Inhalt:
-<pre>
-LoadModule auth_kerb_module modules/mod_auth_kerb.so
-</pre>
-   * Anschließend Modul aktivieren
-<pre>
-a2enmod auth_kerb
-</pre>
-
-RedHat/CentOS
-   * Datei */etc/httpd/conf.d/auth_kerb.conf* anlegen mit Inhalt:
-<pre>
-LoadModule auth_kerb_module modules/mod_auth_kerb.so
-</pre>
-
----+++ Apache konfigurieren
-
-Der Patch fügt zwei neue Direktiven hinzu:
-   1 *KrbAnonymousLogin on|off*
-      * Stanard: off
-      * Schaltet den "anonymen Login" ein
-   1 *KrbAnonymousUser username*
-      * Standard: NULL
-      * Überschreibt Apaches Remote-User.
-
-Apache-Konfiguration anpassen:
-
-1. Eine neue Location-Direktive hinzufügen
-<pre>
-# Do NOT change this directive
-<location bin=''>&lt;Location /bin/krblogin&gt;
-    AuthName KrbAuth
-    AuthType Kerberos
-    Krb5Keytab /path/to/keytab
-    KrbAuthRealms YOUR.REALM
-    KrbMethodNegotiate On
-    KrbMethodK5Passwd Off
-    KrbAnonymousLogin Off      # &lt;--- this line is important!
-    require valid-user
-</location>&lt;/Location&gt;
-</pre>
-
-2. Authentifizierungsmechanismus für Foswikis "bin"-Ordner anpassen
-<pre>
-&lt;Directory "/path/to/qwiki"&gt;
-...
-  AuthName KrbAuth
-  AuthType Kerberos
-  Krb5Keytab /path/to/keytab
-  KrbAuthRealms YOUR.REALM
-  KrbMethodNegotiate On
-  KrbMethodK5Passwd Off
-  KrbAnonymousLogin On
-  require valid-user
-...
-&lt;/Directory&gt;
-</pre>
-
----+++ Plugin Einstellungen
-
-Die Einstellung {Plugins}{KerberosPlugin}{Realm} *muss* auf das aktuelle Authentifizierungs-Realm gesetzt werden.
-
-Sollen Benutzernamen durch LDAP aufgelöst werden, kann die Flag {Plugins}{KerberosPlugin}{UseLdap} gesetzt werden. *Vorher sicherstellen, dass LdapContrib installiert ist.*
-
-Um bestimmte Benutzer von der Kerberosauthentifizierung auszuschließen, kann deren Benutzername in das Feld {Plugins}{KerberosPlugin}{NonKerberosUsers} eingetragen werden. Mehrere Benutzer sind mit einem Komma (,) zu trennen.
----+++ Skin Einstellungen
-
-Das KerberosPlugin kommt mit einem neuen Template, =templates/viewtopbar.kerberos.tmpl=, welches den Login-Bereich überschreibt.
+*Apache 2.4* 
 <verbatim>
-    * Set SKIN = kerberos,custom,modac
+<Location "/bin/krblogin">
+  AuthType Kerberos
+  KrbAuthRealm ACME.LOCAL
+  KrbServiceName HTTP/webserver.acme.local
+  Krb5Keytab /path/to/keytab
+  KrbMethodNegotiate on
+  KrbMethodK5Passwd off
+  ErrorDocument 401 default
+
+  <RequireAll>
+    Require all granted
+    Require valid-user
+  </RequireAll>
+</Location>
 </verbatim>
 
----++ License
+<verbatim>
+<Directory "/path/to/wiki/bin">
+  ...
 
-[[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GNU Public License, version 2]].
+  AuthType Kerberos
+  KrbAuthRealm ACME.LOCAL
+  KrbServiceName HTTP/webserver.acme.local
+  Krb5Keytab /path/to/keytab
+  KrbMethodNegotiate on
+  KrbMethodK5Passwd off
 
----++ Info
+  <RequireAll>
+    Require all granted
+    Require not env blockAccess
+  </RequireAll>
+</Directory>
+</verbatim>
 
-|  Author(s): | [[http://www.modell-aachen.de][Sven Meyer]] |
-|  Copyright: | © %GMTIME{"$year"}% [[http://www.modell-aachen.de][Modell Aachen GmbH]] |
-|  License: | [[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]] |
-|  Release: | 1.0.2 |
-|  Version: | 1001 (2013-04-02) |
-|  Change History: | <!-- versions below in reverse order --> |
-|  1.0.2 | NonKerberosUsers via Konfiguration |
-|  1.0.1 | Update Dokumentation |
-|  1.0.0 | Initial release |
-|  Dependencies: | <table border="1" class="foswikiTable"> <tbody> <tr> <th> Name</th> <th> Version</th> <th> Description</th> </tr> <tr> <td align="left"> Authen::Krb5::Simple</td> <td align="left"> &gt;=0</td> <td align="left"> Required</td> </tr> <tr> <td align="left"> Foswiki::Plugins::JQueryPlugin</td> <td align="left"> &gt;=0</td> <td align="left"> Required</td> </tr> <tr> <td align="left"> Foswiki::Contrib::ModacSkin</td> <td align="left"> &gt;=0</td> <td align="left"> Optional</td> </tr> </tbody> </table> |
-|  Home page: | http://www.modell-aachen.de |
-|  Support: | mailto:meyer@modell-aachen.de |
-<!-- Do _not_ attempt to edit this topic; it is auto-generated. -->
+
+---++ Configuration
+Set ={LoginManager}= to =Foswiki::LoginManager::KerberosLogin=.
+
+---+++ Plugin specific settings
+={Plugins}{KerberosPlugin}{Realms}= %BR%
+specifies all realms =KerberosPlugin= shall
+use for authentication.
+<verbatim>
+{
+  'ACME' => 'ACME.LOCAL',
+  'FOO' => 'FOO.BAR'
+}
+</verbatim>
+
+={Plugins}{KerberosPlugin}{DefaultRealm}= %BR%
+The name of the default realm. Users within that domain can ommit the _NetBIOS_
+name of their domain (manual login).
+<verbatim>
+{Plugins}{KerberosPlugin}{DefaultRealm} = 'ACME'
+</verbatim>
+
+={Plugins}{KerberosPlugin}{NonKerberosUsers}= %BR%
+A comma separated list of users for which SSO will be skipped. All users given
+here have to sign in using their username/password.
+<verbatim>
+{Plugins}{KerberosPlugin}{NonKerberosUsers} = 'user1,user2'
+</verbatim>
+
+There are some more settings which should be quite self-explainatory.
+
+---+++ Skin
+=KerberosPlugin= ships with a customized _top bar skin_ to provide a _logout button_.
+You may enable it by specifying skin =kerberos= in your [[Main.SitePreferences]].
+
+<verbatim>
+    * Set SKIN = custom,kerberos,custom,myskin
+</verbatim>
+
+---++ Plugin Info
+
+| Author: | Foswiki:Main.SvenMeyer |
+| Copyright: | &copy; 2015, Modell Aachen GmbH |
+| License: | GPL ([[http://www.gnu.org/copyleft/gpl.html][GNU General Public License]]) |
+| Release: | %$RELEASE% |
+| Version: | %$VERSION% |
+| Home: | http://www.modell-aachen.de |
+| Support: | http://www.modell-aachen.de |

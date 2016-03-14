@@ -102,7 +102,7 @@ sub _handleKrbUser {
     return $user;
   }
 
-  return $wikiName;
+  return Foswiki::Func::wikiToUserName($wikiName);
 }
 
 sub _restUpdateLoginBar {
@@ -126,6 +126,10 @@ sub _isGuestSession {
   my $wikiName =  Foswiki::Func::getWikiName( $remoteUser );
   my $wikiGuest = $Foswiki::cfg{DefaultUserWikiName};
   return ( $wikiGuest eq $wikiName );
+}
+
+sub dispatchSwitchboard {
+  return '';
 }
 
 1;

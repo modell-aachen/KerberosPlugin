@@ -10,6 +10,12 @@ our @ISA = ( 'Foswiki::LoginManager' );
 
 use Authen::Krb5::Simple;
 
+# GusestSessions should default to enabled, since much of Foswiki depends on
+# having a valid session.
+my $guestSessions =
+  ( !defined $Foswiki::cfg{Sessions}{EnableGuestSessions}
+      || $Foswiki::cfg{Sessions}{EnableGuestSessions} );
+
 sub new {
   my ( $class, $session ) = @_;
   my $self = $class->SUPER::new( $session );
@@ -140,126 +146,162 @@ sub forceAuthentication {
 # zu 99% identisch zu Foswiki::LoginManager::loadSession..
 # wird hier überschrieben, um einen (Apache)RemoteUser ignorieren zu können.
 sub loadSession {
-    my ( $self, $defaultUser, $pwchecker ) = @_;
-    my $session = $self->{session};
+    my ( $this, $defaultUser, $pwchecker ) = @_;
+    my $session = $this->{session};
 
     $defaultUser = $Foswiki::cfg{DefaultUserLogin}
       unless ( defined($defaultUser) );
 
-    my $authUser;
-    if ( $Foswiki::cfg{UseClientSessions}
-        && !$session->inContext('command_line') )
+    # Try and get the user from the webserver. This is referred to as
+    # the "webserver user". the webserver user is authenticated by some
+    # means beyond foswiki e.g. Basic Auth.  getUser is defined in the
+    # LoginManager.  The default returns undef.
+
+    my $authUser = $this->getUser($this);
+
+    # If the NO_FOSWIKI_SESSION environment variable is defined, then
+    # do not create the session. This might be defined if the request
+    # is made by a search engine bot, depending on how the web server
+    # is configured
+
+    if ( $ENV{NO_FOSWIKI_SESSION} ) {
+        return $authUser;
+    }
+
+    # Client sessions processing either cookie or IP2SID based:
+    if (   $Foswiki::cfg{UseClientSessions}
+        && !$session->inContext('command_line')
+        && $Foswiki::cfg{WorkingDir} )
     {
+        $this->{_haveCookie} = $session->{request}->header('Cookie');
 
-        $self->{_haveCookie} = $session->{request}->header('Cookie');
+        # rough check - if we have a cookie for the SID,
+        # or we are using IP2SID mapping then keep going.
+        if (
+            (
+                   $this->{_haveCookie}
+                && $this->{_haveCookie} =~ m/FOSWIKISID=([^\s]*)/
+            )
+            || $Foswiki::cfg{Sessions}{MapIP2SID}
+          )
+        {
+            if ( $Foswiki::cfg{Sessions}{MapIP2SID} ) {
 
-        # Item3568: CGI::Session from 4.0 already does the -d and creates the
-        # sessions directory if it does not exist. For performance reasons we
-        # only test for and create session file directory for older
-        # CGI::Session
-        my $sessionDir = "$Foswiki::cfg{WorkingDir}/tmp";
-        if ( $Foswiki::LoginManager::Session::VERSION < 4.0 ) {
-            unless (
-                -d $sessionDir
-                || (   mkdir( $Foswiki::cfg{WorkingDir} )
-                    && mkdir($sessionDir) )
-              )
-            {
-                die "Could not create $sessionDir for storing sessions";
-            }
-        }
+                # map the end user IP address to a session ID
+                my $sid = $this->_IP2SID();
 
-        # force an appropriate umask
-        my $oldUmask =
-          umask(
-            oct(777) - ( ( $Foswiki::cfg{Session}{filePermission} + 0 ) ) &
-              oct(777) );
+                $this->{_cgisession} = $this->_loadCreateCGISession($sid);
 
-        # First, see if there is a cookied session, creating a new session
-        # if necessary.
-        if ( $Foswiki::cfg{Sessions}{MapIP2SID} ) {
-
-            # map the end user IP address to a session ID
-            my $sid = $self->_IP2SID();
-            if ($sid) {
-                $self->{_cgisession} = Foswiki::LoginManager::Session->new(
-                    undef, $sid,
-                    {
-                        Directory => $sessionDir,
-                        UMask     => $Foswiki::cfg{Session}{filePermission}
-                    }
-                );
+                $this->_IP2SID( $this->{_cgisession}->id() );
             }
             else {
 
-                # The IP address was not mapped; create a new session
+                # IP mapping is off; use the request cookie
+                $this->{_cgisession} =
+                  $this->_loadCreateCGISession( $session->{request} );
 
-                $self->{_cgisession} = Foswiki::LoginManager::Session->new(
-                    undef, undef,
-                    {
-                        Directory => $sessionDir,
-                        UMask     => $Foswiki::cfg{Session}{filePermission}
-                    }
-                );
-                $self->_IP2SID( $self->{_cgisession}->id() );
             }
+
+            die Foswiki::LoginManager::Session->errstr()
+              unless $this->{_cgisession};
+
+            # Get the authorised user stored in the session
+
+            my $sessionUser = Foswiki::Sandbox::untaintUnchecked(
+                $this->{_cgisession}->param('AUTHUSER') );
+
+    # If we are bootstrapping, and the defaultUser from Foswiki.pm is admin
+    # Then override the session user to become admin.   This gets around a stale
+    # browser cookie from blocking the bootstrap admin login.
+
+            $authUser = $defaultUser
+              if ( $Foswiki::cfg{isBOOTSTRAPPING}
+                && $defaultUser eq 'admin' );
+
+            # An admin user stored in the session can override the webserver
+            # user; handy for sudo
+
+            $authUser = $sessionUser
+              if ( !defined($authUser)
+                || $sessionUser
+                && $sessionUser eq $Foswiki::cfg{AdminUserLogin} );
         }
-        else {
-
-            # IP mapping is off; use the request cookie
-            $self->{_cgisession} = Foswiki::LoginManager::Session->new(
-                undef,
-                $session->{request},
-                {
-                    Directory => $sessionDir,
-                    UMask     => $Foswiki::cfg{Session}{filePermission}
-                }
-            );
-        }
-
-        # restore old umask
-        umask($oldUmask);
-
-        die Foswiki::LoginManager::Session->errstr()
-          unless $self->{_cgisession};
-
-        # Get the authorised user stored in the session
-
-        my $sessionUser = Foswiki::Sandbox::untaintUnchecked(
-            $self->{_cgisession}->param('AUTHUSER') );
-
-        # An admin user stored in the session can override the webserver
-        # user; handy for sudo
-
-        $authUser = $sessionUser
-          if ( !defined($authUser)
-            || $sessionUser && $sessionUser eq $Foswiki::cfg{AdminUserLogin} );
     }
 
-
-
-    # Fix für SwitchableLogin
+    # SwitchableLogin
     my $sudoEnabled = $Foswiki::cfg{SwitchableLoginManagerContrib}{SudoEnabled} &&
       $Foswiki::cfg{SwitchableLoginManagerContrib}{SudoAuth} ne 'changeme!';
     my $sudo = $session->{request}->param('sudouser');
     my $sudoauth = $session->{request}->param('sudoauth');
     if ( $sudoEnabled && $sudo ) {
-      $authUser = $self->getUser();
+      $authUser = $this->getUser();
     }
 
+    # Checking for URI parameters
     if ( !$authUser ) {
         # if we couldn't get the login manager or the http session to tell
         # us who the user is, check the username and password URI params.
+        #
+        # Note that this code only applies to scripts other than login.
+        # The login script is handled separately.
 
-        my $login = $session->{request}->param('username');
-        my $pass  = $session->{request}->param('password');
+        my $script = $session->{request}->base_action();
+
+        my $login;    # username from CLI/URI parameters
+        my $pass;     # password from CLI/URI parameters
+
+        # If we are in the CLI environment, then
+        # the only option is to pass "URL parameters"
+        #  - The CLI overrides the "defaultUser" to
+        #    be admin.  CLI runs as admin by default.
+        #  - -username/-password parameters allow
+        #    CLI to use conventional authentication
+
+        if (   $session->inContext('command_line')
+            && $session->{request}->param('username') )
+        {
+            $login = $session->{request}->param('username');
+            $pass = $session->{request}->param('password') || '';
+            $session->{request}->delete( 'username', 'password' );
+
+            # CLI defaults to Admin User,  but if a
+            # user/pass was provided on the cli,  and was wrong,
+            # we probably don't want to fall back
+            # to Admin, so override the default.
+            $defaultUser = $Foswiki::cfg{DefaultUserLogin};
+        }
+
+        # If the configuration allows URL params,
+        # and the correct HTTP method is in use,
+        # Then accept the username & password,
+        # and delete them from the request to avoid
+        # them being accessed later.
 
         if ( !$login ) {
+            if (   defined $session->{request}->param('username')
+                && defined $Foswiki::cfg{Session}{AcceptUserPwParam}
+                && $script =~ m/$Foswiki::cfg{Session}{AcceptUserPwParam}/ )
+            {
+                if (
+                    $Foswiki::cfg{Session}{AcceptUserPwParamOnGET}
+                    || ( defined $session->{request}->method()
+                        && uc( $session->{request}->method() ) eq 'POST' )
+                  )
+                {
+                    $login = $session->{request}->param('username');
+                    $pass  = $session->{request}->param('password');
+                    $session->{request}->delete( 'username', 'password' );
+                }
+            }
+        }
 
-            # Nothing in the query params. Check query headers.
+        # Implements the X-Authorization header if one is present
+        # Nothing was in the query params. Check query headers.
+        if ( !$login ) {
+
             my $auth = $session->{request}->http('X-Authorization');
             if ( defined $auth ) {
-                if ( $auth =~ /^FoswikiBasic (.+)$/ ) {
+                if ( $auth =~ m/^FoswikiBasic (.+)$/ ) {
 
                     # If the user agent wishes to send the userid "Aladdin"
                     # and password "open sesame", it would use the following
@@ -267,7 +309,7 @@ sub loadSession {
                     # Authorization: Foswiki QWxhZGRpbjpvcGVuIHNlc2FtZQ==
                     require MIME::Base64;
                     my $cred = MIME::Base64::decode_base64($1);
-                    if ( $cred =~ /:/ ) {
+                    if ( $cred =~ m/:/ ) {
                         ( $login, $pass ) = split( ':', $cred, 2 );
                     }
                 }    # TODO: implement FoswikiDigest here
@@ -279,16 +321,14 @@ sub loadSession {
             # Ist KRB_LOGOUT gesetzt, ignorieren wir den Apache-User.
             my $krbLoggedOut = Foswiki::Func::getSessionValue( "KRB_LOGOUT" );
             unless ( $krbLoggedOut ) {
-              $authUser = $self->getUser( $self );
+              $authUser = $this->getUser( $this );
             }
         }
 
+        # A login credential was found,  verify the userid & password
         if ( $login && defined $pass && $pwchecker ) {
             my $validation = $pwchecker->checkPassword( $login, $pass );
             unless ($validation) {
-                my $res = $session->{response};
-                my $err = "ERROR: (401) Can't login as $login";
-
                 # Item1953: You might think that this is needed:
                 #    $res->header( -type => 'text/html', -status => '401' );
                 #    throw Foswiki::EngineException( 401, $err, $res );
@@ -303,9 +343,10 @@ sub loadSession {
         else {
 
             # Last ditch attempt; if a user was passed in to this function,
-            # then use it (it is normally {remoteUser} from the session
-            # object)
-            $authUser = $defaultUser unless $authUser;
+            # then use it (it is normally {remoteUser} from the session object
+            # or the -user parameter in the command_line (defaults to admin)
+            # Also used in unit tests when creating a newFoswikiSession
+            $authUser = $defaultUser;
         }
     }
 
@@ -313,8 +354,12 @@ sub loadSession {
     # was no better information available.
 
     # is this a logout?
-    if (   ( $authUser && $authUser ne $Foswiki::cfg{DefaultUserLogin} )
-        && ( $session->{request} && $session->{request}->param('logout') ) )
+    if (
+        ( $authUser && $authUser ne $Foswiki::cfg{DefaultUserLogin} )
+        && (   $this->{_cgisession}
+            && $session->{request}
+            && $session->{request}->param('logout') )
+      )
     {
         # Wird der IE einmal aufgefordert einen Negotiation-Header zu schicken, wird
         # er diesen immer wieder mitschicken.
@@ -326,7 +371,7 @@ sub loadSession {
         # SMELL: is there any way to get evil data into the CGI session such
         # that this untaint is less than safe?
         my $sudoUser = Foswiki::Sandbox::untaintUnchecked(
-            $self->{_cgisession}->param('SUDOFROMAUTHUSER') );
+            $this->{_cgisession}->param('SUDOFROMAUTHUSER') );
 
         if ($sudoUser) {
             $session->logger->log(
@@ -337,54 +382,75 @@ sub loadSession {
                     user   => $sudoUser
                 }
             );
-            $self->{_cgisession}->clear('SUDOFROMAUTHUSER');
+            $this->{_cgisession}->clear('SUDOFROMAUTHUSER');
             $authUser = $sudoUser;
         }
         else {
             $authUser =
-              $self->redirectToLoggedOutUrl( $authUser, $defaultUser );
+              $this->redirectToLoggedOutUrl( $authUser, $defaultUser );
         }
     }
     $session->{request}->delete('logout');
-    $self->userLoggedIn($authUser);
 
-    if ( $self->{_cgisession} ) {
+    # SMELL:  EXPERIMENTAL - Guest sessions can be made optional:
+    #  - unset $Foswiki::cfg{Sessions}{EnableGuestSessions}
+    # No sense creating or keeping sessions for guest users.
+    # Note that if guests can comment, update, or otherwise POST to
+    # Foswiki, then Guest Sessions should be enabled.
+
+    # Call to getLoggedIn inserts the auth user into the cgi session
+    $this->userLoggedIn($authUser)
+      unless ( $authUser eq $Foswiki::cfg{DefaultUserLogin}
+        && !$guestSessions );
+
+    # Cleanup unused guest sessions
+    if (   $this->{_cgisession}
+        && !$guestSessions
+        && $authUser eq $Foswiki::cfg{DefaultUserLogin} )
+    {
+        $this->{_cgisession}->delete();
+        $this->{_cgisession}->flush();
+        $this->{_cgisession} = undef;
+        $this->_delSessionCookieFromResponse();
+    }
+
+    if ( $this->{_cgisession} ) {
         $session->{prefs}->setInternalPreferences(
-            SESSIONID  => $self->{_cgisession}->id(),
+            SESSIONID  => $this->{_cgisession}->id(),
             SESSIONVAR => $CGI::Session::NAME
         );
 
         # Restore CGI Session parameters
-        for ( $self->{_cgisession}->param ) {
-            my $value = $self->{_cgisession}->param($_);
+        for ( $this->{_cgisession}->param ) {
+            my $value = $this->{_cgisession}->param($_);
             $session->{prefs}->setInternalPreferences( $_ => $value );
         }
 
         # May end up doing this several times; but this is the only place
         # if should really need to be done, unless someone allocates a
         # new response object.
-        $self->_addSessionCookieToResponse();
+        $this->_addSessionCookieToResponse();
     }
 
-  if ( $self->{hasLdap} && $self->{UseLdap} ) {
-    my $origUser = $authUser;
-    $authUser = Foswiki::Sandbox::untaintUnchecked( $authUser );
-    if ( defined $authUser ) {
-      $authUser =~ s/^\s+//o;
-      $authUser =~ s/\s+$//o;
+    if ( $this->{hasLdap} && $this->{UseLdap} ) {
+        my $origUser = $authUser;
+        $authUser = Foswiki::Sandbox::untaintUnchecked( $authUser );
+        if ( defined $authUser ) {
+            $authUser =~ s/^\s+//o;
+            $authUser =~ s/\s+$//o;
 
-      $authUser = lc( $authUser ) if ( $self->{ldap}{caseSensitivity} eq 'off' );
-      $authUser = $self->{ldap}->normalizeLoginName( $authUser ) if $self->{ldap}{normalizeLoginName};
+            $authUser = lc( $authUser ) if ( $this->{ldap}{caseSensitivity} eq 'off' );
+            $authUser = $this->{ldap}->normalizeLoginName( $authUser ) if $this->{ldap}{normalizeLoginName};
 
-      unless ( $self->{ldap}{excludeMap}{$authUser} ) {
-        $self->{ldap}->checkCacheForLoginName( $authUser );
-      } else {
-        return $origUser;
-      }
+            unless ( $this->{ldap}{excludeMap}{$authUser} ) {
+                $this->{ldap}->checkCacheForLoginName( $authUser );
+            } else {
+                return $origUser;
+            }
+        }
     }
-  }
 
-  return $authUser;
+    return $authUser;
 }
 
 sub loginUrl {
