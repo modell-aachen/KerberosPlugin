@@ -29,7 +29,7 @@ sub initPlugin {
   Foswiki::Func::registerTagHandler( 'KRBLOGINBAR', \&_handleLoginBar );
   Foswiki::Func::registerTagHandler( 'KRBUSER', \&_handleKrbUser );
 
-  my %restOpts = ( "authenticate", 0, "http_allow", "GET" );
+  my %restOpts = ( "authenticate", 0, "http_allow", "GET", "validate", 0 );
   Foswiki::Func::registerRESTHandler( "Update", \&_restUpdateLoginBar, %restOpts );
 
   eval {
