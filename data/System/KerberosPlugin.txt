@@ -6,6 +6,8 @@
 %TOC%
 
 ---++ Installation
+KerberosPlugin won't be supported anymore. Please use UnifiedAuthContrib instead.
+
 %$INSTALL_INSTRUCTIONS%
 
 ---+++ Dependencies
